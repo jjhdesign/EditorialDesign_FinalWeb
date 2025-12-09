@@ -223,7 +223,6 @@
       top: 0;
       left: 0;
       width: 50%;
-      padding-left: 20px;
       padding-top: 0;
       z-index: 50;
       pointer-events: auto;
@@ -252,7 +251,6 @@
       /* Gap after title area */
       position: relative;
       z-index: 1;
-      padding-left: 20px;
       padding-right: 20px;
     }
 
@@ -1594,69 +1592,73 @@
 
     function resetRightToHome() {
       rightPane.innerHTML = `
-    <div class="home-bg-fixed">
-      <img src="images/home.png" alt="Nest Background" />
-    </div>
-    <div class="right-scroll-container">
-      <div class="home-content-wrapper">
-        <div class="home-header-rail">
-          <div class="home-header-grid">
-            <div class="home-title-block">
-              <h1 class="home-title">멸종위기 1급<br>조류 아카이빙</h1>
+        <div class="home-bg-fixed">
+          <img src="images/home.png" alt="Nest Background" />
+        </div>
+        <!-- Fixed Title outside of scroll container -->
+        <div class="home-fixed-title">
+          <h1 class="home-title">멸종위기 1급<br>조류 아카이빙</h1>
+        </div>
+
+        <div class="right-scroll-container">
+          <div class="home-content-wrapper">
+
+            <!-- Subtitle inside scroll container -->
+            <div class="home-subtitle-container">
+              <div class="home-subtitle">서울과학기술대학교<br>편집디자인<br>기말 프로젝트<br>2025.11.05.-2025.12.10.</div>
             </div>
-            <div class="home-subtitle-block">
-              <div class="home-subtitle">
-                서울과학기술대학교<br>편집디자인<br>기말 프로젝트<br>2025.11.05.-2025.12.00.
+
+            <!-- Content Layer -->
+            <div class="home-text-grid">
+              <!-- Row 1 -->
+              <div>
+                <div class="detail-title">현황</div>
+                <div class="detail-body" style="height:auto;">
+                  <p>우리나라에는 현재 '야생생물 보호 및 관리에 관한 법률'에 따라 총 282종의 멸종위기 야생생물이 지정되어 있으며, 이 중 약 70종이 조류에 해당한다.</p>
+                  <p>그러나 이와 같은 위기 상황이 충분히 인식되어 있다고 말하기는 어렵다. 대다수의 사람들은 "멸종위기 동물" 하면 호랑이나 곰 같은 상징적인 동물만을 떠올릴 뿐, 실제로 우리 주변
+                    하늘을 날던 새들이 사라지고 있다는 사실에는 무관심하다. 조류는 일상 속에서 가장 자주 접할 수 있는 동물이지만, 그 존재의 가치는 쉽게 잊히고 있다.</p>
+                </div>
+              </div>
+              <div>
+                <div class="detail-title">파장</div>
+                <div class="detail-body" style="height:auto;">
+                  <p>조류의 멸종은 생태계의 균형을 근본적으로 흔든다. 새들은 곤충 개체 수를 조절하고, 식물의 씨앗을 퍼뜨리며, 생태계 내 먹이사슬의 중요한 고리 역할을 한다. 한 종의 조류가 사라지면
+                    그 종에 의존하던 곤충, 식물, 포식자들이 연쇄적으로 영향을 받게 된다.</p>
+                  <p>또한 조류가 서식하는 갯벌과 습지는 수질 정화와 탄소 저장, 홍수 완화 기능을 하는 핵심 생태계이다. 새가 사라지면 이 서식지의 회복력도 약화되고, 결국 인간에게 직접적인 환경적
+                    피해가 돌아오게 된다.</p>
+                </div>
+              </div>
+
+              <!-- Row 2 -->
+              <div>
+                <div class="detail-title">원인</div>
+                <div class="detail-body" style="height:auto;">
+                  <p>조류의 멸종을 막기 위한 방법은 이미 잘 알려져 있다. 서식지 보전, 갯벌 매립 제한, 농약 사용 감축, 인공 둥지 설치, 시민 모니터링 등 다양한 보전 전략이 존재한다. 문제는
+                    '방법의 부재'가 아니라 '실행의 부재'다.</p>
+                  <p>서식지 보전은 개발 이익과 충돌하는 경우가 많고, 환경영향평가는 형식적으로 이루어지는 사례가 여전히 존재한다. 또한 지역사회는 '멸종위기종 보호'보다는 '경제적 효율성'을 우선시하는
+                    경향이 강하다. 조류 보전 활동에 대한 시민의 관심과 참여도 또한 높지 않다.</p>
+                  <p>결국, 보전의 기술은 충분하지만, 보전의 문화는 부족한 사회가 오늘날 우리가 마주한 현실이다. 그 결과 제도적 보호종 지정은 늘어나고 있지만, 실제 개체 수 회복은 좀처럼 이루어지지
+                    않고 있다.</p>
+                </div>
+              </div>
+              <div>
+                <div class="detail-title">의의</div>
+                <div class="detail-body" style="height:auto;">
+                  <p>이러한 상황에서 '멸종위기 1급 조류 아카이빙 프로젝트'는 단순한 생태 데이터 기록이 아니라, 사라져 가는 존재들의 흔적을 기억하고 전하는 행위로서 사회적 의미를 가진다.</p>
+                  <p>아카이빙은 과거의 기억을 저장하는 동시에, 현재의 무관심을 비추는 거울이 된다. 이 프로젝트는 데이터를 넘어 감정적 공감을 불러일으키며, 사람들이 "이 새가 사라졌다"가 아니라 "이
+                    새가 우리와 함께 살았다"는 인식을 회복하도록 돕는다.</p>
+                  <p>이는 곧 자연과 인간의 관계를 회복하는 문화적 시도이자, 인식 → 공감 → 행동으로 이어지는 생태적 감수성의 사다리 중 '공감'의 단계를 채워주는 일이다.</p>
+                  <p>멸종위기 조류의 아카이빙은 그들의 죽음을 애도하는 동시에, 다시는 같은 죽음을 반복하지 않기 위한 기억의 장치가 될 수 있다.</p>
+                  <p>이 프로젝트는 그 자체로 '보전의 출발점'이며, 잊힘을 막는 가장 인간적인 방식의 보호 활동이다.</p>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-
-        <!-- 👇 여기 home-text-grid 래퍼를 다시 살려준 부분 -->
-        <div class="home-text-grid">
-          <div>
-            <div class="detail-title">현황</div>
-            <div class="detail-body" style="height:auto;">
-              <p>우리나라에는 현재 '야생생물 보호 및 관리에 관한 법률'에 따라 총 282종의 멸종위기 야생생물이 지정되어 있으며, 이 중 약 70종이 조류에 해당한다.</p>
-              <p>그러나 이와 같은 위기 상황이 충분히 인식되어 있다고 말하기는 어렵다. 대다수의 사람들은 "멸종위기 동물" 하면 호랑이나 곰 같은 상징적인 동물만을 떠올릴 뿐, 실제로 우리 주변 하늘을 날던 새들이 사라지고 있다는 사실에는 무관심하다. 조류는 일상 속에서 가장 자주 접할 수 있는 동물이지만, 그 존재의 가치는 쉽게 잊히고 있다.</p>
-            </div>
-          </div>
-
-          <div>
-            <div class="detail-title">파장</div>
-            <div class="detail-body" style="height:auto;">
-              <p>조류의 멸종은 생태계의 균형을 근본적으로 흔든다. 새들은 곤충 개체 수를 조절하고, 식물의 씨앗을 퍼뜨리며, 생태계 내 먹이사슬의 중요한 고리 역할을 한다. 한 종의 조류가 사라지면 그 종에 의존하던 곤충, 식물, 포식자들이 연쇄적으로 영향을 받게 된다.</p>
-              <p>또한 조류가 서식하는 갯벌과 습지는 수질 정화와 탄소 저장, 홍수 완화 기능을 하는 핵심 생태계이다. 새가 사라지면 이 서식지의 회복력도 약화되고, 결국 인간에게 직접적인 환경적 피해가 돌아오게 된다.</p>
-            </div>
-          </div>
-
-          <div>
-            <div class="detail-title">원인</div>
-            <div class="detail-body" style="height:auto;">
-              <p>조류의 멸종을 막기 위한 방법은 이미 잘 알려져 있다. 서식지 보전, 갯벌 매립 제한, 농약 사용 감축, 인공 둥지 설치, 시민 모니터링 등 다양한 보전 전략이 존재한다. 문제는 '방법의 부재'가 아니라 '실행의 부재'다.</p>
-              <p>서식지 보전은 개발 이익과 충돌하는 경우가 많고, 환경영향평가는 형식적으로 이루어지는 사례가 여전히 존재한다. 또한 지역사회는 '멸종위기종 보호'보다는 '경제적 효율성'을 우선시하는 경향이 강하다. 조류 보전 활동에 대한 시민의 관심과 참여도 또한 높지 않다.</p>
-              <p>결국, 보전의 기술은 충분하지만, 보전의 문화는 부족한 사회가 오늘날 우리가 마주한 현실이다. 그 결과 제도적 보호종 지정은 늘어나고 있지만, 실제 개체 수 회복은 좀처럼 이루어지지 않고 있다.</p>
-            </div>
-          </div>
-
-          <div>
-            <div class="detail-title">의의</div>
-            <div class="detail-body" style="height:auto;">
-              <p>이러한 상황에서 '멸종위기 1급 조류 아카이빙 프로젝트'는 단순한 생태 데이터 기록이 아니라, 사라져 가는 존재들의 흔적을 기억하고 전하는 행위로서 사회적 의미를 가진다.</p>
-              <p>아카이빙은 과거의 기억을 저장하는 동시에, 현재의 무관심을 비추는 거울이 된다. 이 프로젝트는 데이터를 넘어 감정적 공감을 불러일으키며, 사람들이 "이 새가 사라졌다"가 아니라 "이 새가 우리와 함께 살았다"는 인식을 회복하도록 돕는다.</p>
-              <p>이는 곧 자연과 인간의 관계를 회복하는 문화적 시도이자, 인식 → 공감 → 행동으로 이어지는 생태적 감수성의 사다리 중 '공감'의 단계를 채워주는 일이다.</p>
-              <p>멸종위기 조류의 아카이빙은 그들의 죽음을 애도하는 동시에, 다시는 같은 죽음을 반복하지 않기 위한 기억의 장치가 될 수 있다.</p>
-              <p>이 프로젝트는 그 자체로 '보전의 출발점'이며, 잊힘을 막는 가장 인간적인 방식의 보호 활동이다.</p>
+            <div class="home-footer">
+              Copyright ⓒ 2025 JaeHyun Jeong. All rights reserved.
             </div>
           </div>
         </div>
-
-        <div class="home-footer">
-          Copyright ⓒ 2025 JaeHyun Jeong. All rights reserved.
-        </div>
-      </div>
-    </div>
-  `;
+      `;
       homeScrollCleanup = setupHomeHeroScroll(rightPane);
     }
     (function init() {
