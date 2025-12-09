@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Split Grid Gallery — Wireframe Implementation</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard/dist/web/static/pretendard.css" />
+
+  <style>
+    :root {
+      --left-bg: #1a1a1a;
+      --right-bg: #000000;
+      --gap: 12px;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background: var(--right-bg);
+      font-family: "Pretendard", sans-serif;
+      line-height: 1.4;
+      letter-spacing: -0.02em;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+    }
+
+    * {
+      box-sizing: border-box;
+      cursor: none;
+      /* Hide default cursor everywhere */
+    }
+
+    .custom-cursor {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 48px;
+      height: 48px;
+      background-color: white;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      mix-blend-mode: difference;
+    }
+
+    .split {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    /* LEFT PANEL */
+    .left {
+      width: 65%;
+      min-width: 65%;
+      background: var(--left-bg);
+      padding: 8px;
+      overflow-y: auto;
+      scrollbar-width: none;
+    }
+
+    .left::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* GRID */
+    .grid-wrapper {
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .grid {
+      display: grid;
+      width: 100%;
+      padding: 0px;
+      gap: 8px;
+      grid-template-columns: repeat(4, 1fr);
+      grid-auto-flow: dense;
+    }
+
+    .tile {
+      width: 100%;
+      aspect-ratio: 1/1;
+      background: #000000;
+      box-shadow: none !important;
+      filter: none !important;
+      border: none !important;
+      margin: 0;
+      padding: 0;
+      transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+      z-index: 1;
+      position: relative;
+    }
+
+    .tile::after {
+      content: "(" attr(data-index) ")";
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      font-family: "Pretendard", sans-serif;
+      font-size: 14px;
+      color: white;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .tile.active {
+      grid-column: span 2;
+      grid-row: span 2;
+      z-index: 10;
+      border: 1px solid white !important;
+    }
+
+    .tile img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      box-shadow: none !important;
+      filter: none !important;
+    }
+
+    .xray-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: black;
+      pointer-events: none;
+      z-index: 2;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .xray-image {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+      z-index: 3;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .tile:hover .xray-bg,
+    .tile:hover .xray-image {
+      opacity: 1;
+    }
+
+    /* RIGHT PANEL */
+    .right {
+      width: 35%;
+      min-width: 180px;
+      background: var(--right-bg);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      margin: 0;
+      border-left: 1px solid #7c7c7c;
+      /* Scroll is handled by child for home view, but we keep it generic */
+      position: relative;
+      overflow: hidden;
+    }
+
+    .right-scroll-container {
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      scrollbar-width: none;
+      position: relative;
+    }
+
+    .right-scroll-container::-webkit-scrollbar {
+      display: none;
+    }
+
+
+
+    .home-bg-fixed {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+      pointer-events: none;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+    }
+
+    .home-bg-fixed img {
+      width: 70%;
+      height: auto;
+      object-fit: contain;
+      transform: translateY(-15%);
+    }
+
+    .home-content-wrapper {
+      position: relative;
+      padding: 0px;
+      padding-top: 32px;
+    }
+
+    .home-header-rail {
+      position: relative;
+      min-height: 100vh;
+      /* 헤더가 스크롤 중에도 화면에 남아 있도록 충분한 높이 확보 */
+    }
+
+    .home-fixed-title {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 50%;
+      padding-left: 20px;
+      padding-top: 0;
+      z-index: 50;
+      pointer-events: auto;
+    }
+
+    .home-subtitle-container {
+      margin-top: 400px;
+      width: 50%;
+      margin-left: 50%;
+      padding-bottom: 20px;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+
+    .home-subtitle {
+      margin-top: 0;
+    }
+
+    .home-text-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px 12px;
+      padding-top: 0;
+      margin-top: 150px;
+      /* Gap after title area */
+      position: relative;
+      z-index: 1;
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+
+
+
+    .home-title {
+      font-size: 40px;
+      font-weight: 500;
+      color: #005EFE;
+      line-height: 1.2;
+      margin: 0 0 -12px 0;
+      text-align: left;
+    }
+
+    .home-subtitle {
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.6;
+      color: #005EFE;
+      white-space: pre-line;
+    }
+
+    .detail-body p,
+    .detail-body2 p {
+      margin: 0;
+    }
+
+    .detail-body p+p,
+    .detail-body2 p+p {
+      text-indent: 40px;
+    }
+
+    .home-footer {
+      margin-top: 90px;
+      padding-bottom: 4px;
+      font-size: 14px;
+      color: #666;
+    }
+
+    .showcase {
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* rotated title */
+    .rotated-title {
+      position: absolute;
+      right: -50px;
+      top: 40px;
+      font-size: 64px;
+      font-weight: 500;
+      transform: rotate(90deg);
+      opacity: 0.85;
+      white-space: nowrap;
+      color: black;
+    }
+
+    .big-image {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    /* Header styles within grid */
+    .header-number {
+      font-size: 40px;
+      font-weight: 500;
+      color: white;
+      line-height: 1;
+      margin-bottom: -10px;
+    }
+
+    .header-title {
+      font-size: 40px;
+      font-weight: 500;
+      color: white;
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    .header-scientific-name {
+      font-size: 14px;
+      font-weight: 400;
+      color: white;
+      margin-top: 0px;
+      margin-bottom: -8px;
+      font-style: normal;
+    }
+
+    .header-divider {
+      width: 100%;
+      height: 1px;
+      background-color: #7c7c7c;
+      margin-top: 0px;
+      margin-bottom: -4px;
+    }
+
+    .sticky-header-wrapper {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background-color: #000000;
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: -12px;
+    }
+
+    .sticky-header-wrapper .detail-col {
+      margin-top: 4px;
+    }
+
+    .content {
+      padding: 0;
+      line-height: 1.6;
+    }
+
+    /* Detail two-column layout */
+    .detail-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .detail-col {
+      width: calc(50% - 6px);
+      margin-top: 28px;
+    }
+
+    .box270 {
+      height: 380px;
+      min-height: 380px;
+    }
+
+    .box240 {
+      height: 380px;
+      min-height: 380px;
+    }
+
+    .detail-title {
+      font-size: 24px;
+      margin-bottom: 16px;
+      text-decoration: underline;
+      color: #ffffff;
+      text-underline-offset: 6px;
+      text-decoration-thickness: 1px;
+    }
+
+    .detail-subtitle {
+      font-size: 18px;
+      margin-top: -4px;
+      margin-left: 0;
+      line-height: 1.4;
+    }
+
+    .detail-body {
+      margin-top: -4px;
+      margin-left: 60px;
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: normal;
+      height: 380px;
+      min-height: 380px;
+      overflow: hidden;
+    }
+
+    .detail-body2 {
+      margin-top: -20px;
+      margin-left: 60px;
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: normal;
+      height: 380px;
+      min-height: 400px;
+      overflow: hidden;
+    }
+
+    /* 반응형 */
+    .info-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .info-row .detail-subtitle {
+      width: 60px;
+      margin: 0;
+      flex-shrink: 0;
+      text-decoration: none;
+    }
+
+    .info-row .detail-body {
+      margin: 0;
+      height: auto;
+      min-height: auto;
+      line-height: 1.4;
+    }
+
+    @media (max-width: 1200px) {
+      .grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 500px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="split">
+    <aside class="left">
+      <div class="grid" id="grid"></div>
+    </aside>
+
+    <main class="right" id="rightPane" tabindex="0">
+      <div class="home-bg-fixed">
+        <img src="images/home.png" alt="Nest Background" />
+      </div>
+      <!-- Fixed Title outside of scroll container -->
+      <div class="home-fixed-title">
+        <h1 class="home-title">멸종위기 1급<br>조류 아카이빙</h1>
+      </div>
+
+      <div class="right-scroll-container">
+        <div class="home-content-wrapper">
+
+          <!-- Subtitle inside scroll container -->
+          <div class="home-subtitle-container">
+            <div class="home-subtitle">서울과학기술대학교<br>편집디자인<br>기말 프로젝트<br>2025.11.05.-2025.12.10.</div>
+          </div>
+
+          <!-- Content Layer -->
+          <div class="home-text-grid">
+            <!-- Row 1 -->
+            <div>
+              <div class="detail-title">현황</div>
+              <div class="detail-body" style="height:auto;">
+                <p>우리나라에는 현재 '야생생물 보호 및 관리에 관한 법률'에 따라 총 282종의 멸종위기 야생생물이 지정되어 있으며, 이 중 약 70종이 조류에 해당한다.</p>
+                <p>그러나 이와 같은 위기 상황이 충분히 인식되어 있다고 말하기는 어렵다. 대다수의 사람들은 "멸종위기 동물" 하면 호랑이나 곰 같은 상징적인 동물만을 떠올릴 뿐, 실제로 우리 주변
+                  하늘을 날던 새들이 사라지고 있다는 사실에는 무관심하다. 조류는 일상 속에서 가장 자주 접할 수 있는 동물이지만, 그 존재의 가치는 쉽게 잊히고 있다.</p>
+              </div>
+            </div>
+            <div>
+              <div class="detail-title">파장</div>
+              <div class="detail-body" style="height:auto;">
+                <p>조류의 멸종은 생태계의 균형을 근본적으로 흔든다. 새들은 곤충 개체 수를 조절하고, 식물의 씨앗을 퍼뜨리며, 생태계 내 먹이사슬의 중요한 고리 역할을 한다. 한 종의 조류가 사라지면
+                  그 종에 의존하던 곤충, 식물, 포식자들이 연쇄적으로 영향을 받게 된다.</p>
+                <p>또한 조류가 서식하는 갯벌과 습지는 수질 정화와 탄소 저장, 홍수 완화 기능을 하는 핵심 생태계이다. 새가 사라지면 이 서식지의 회복력도 약화되고, 결국 인간에게 직접적인 환경적
+                  피해가 돌아오게 된다.</p>
+              </div>
+            </div>
+
+            <!-- Row 2 -->
+            <div>
+              <div class="detail-title">원인</div>
+              <div class="detail-body" style="height:auto;">
+                <p>조류의 멸종을 막기 위한 방법은 이미 잘 알려져 있다. 서식지 보전, 갯벌 매립 제한, 농약 사용 감축, 인공 둥지 설치, 시민 모니터링 등 다양한 보전 전략이 존재한다. 문제는
+                  '방법의 부재'가 아니라 '실행의 부재'다.</p>
+                <p>서식지 보전은 개발 이익과 충돌하는 경우가 많고, 환경영향평가는 형식적으로 이루어지는 사례가 여전히 존재한다. 또한 지역사회는 '멸종위기종 보호'보다는 '경제적 효율성'을 우선시하는
+                  경향이 강하다. 조류 보전 활동에 대한 시민의 관심과 참여도 또한 높지 않다.</p>
+                <p>결국, 보전의 기술은 충분하지만, 보전의 문화는 부족한 사회가 오늘날 우리가 마주한 현실이다. 그 결과 제도적 보호종 지정은 늘어나고 있지만, 실제 개체 수 회복은 좀처럼 이루어지지
+                  않고 있다.</p>
+              </div>
+            </div>
+            <div>
+              <div class="detail-title">의의</div>
+              <div class="detail-body" style="height:auto;">
+                <p>이러한 상황에서 '멸종위기 1급 조류 아카이빙 프로젝트'는 단순한 생태 데이터 기록이 아니라, 사라져 가는 존재들의 흔적을 기억하고 전하는 행위로서 사회적 의미를 가진다.</p>
+                <p>아카이빙은 과거의 기억을 저장하는 동시에, 현재의 무관심을 비추는 거울이 된다. 이 프로젝트는 데이터를 넘어 감정적 공감을 불러일으키며, 사람들이 "이 새가 사라졌다"가 아니라 "이
+                  새가 우리와 함께 살았다"는 인식을 회복하도록 돕는다.</p>
+                <p>이는 곧 자연과 인간의 관계를 회복하는 문화적 시도이자, 인식 → 공감 → 행동으로 이어지는 생태적 감수성의 사다리 중 '공감'의 단계를 채워주는 일이다.</p>
+                <p>멸종위기 조류의 아카이빙은 그들의 죽음을 애도하는 동시에, 다시는 같은 죽음을 반복하지 않기 위한 기억의 장치가 될 수 있다.</p>
+                <p>이 프로젝트는 그 자체로 '보전의 출발점'이며, 잊힘을 막는 가장 인간적인 방식의 보호 활동이다.</p>
+              </div>
+            </div>
+          </div>
+          <div class="home-footer">
+            Copyright ⓒ 2025 JaeHyun Jeong. All rights reserved.
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const TILE_COUNT = 16;
+    const grid = document.getElementById("grid");
+    // Removed specific IDs as they may not exist on home view now, but we select rightPane dynamically
+    const rightPane = document.getElementById("rightPane");
+    // content and bigImage are no longer static top-level but inside dynamic content
+    let content = null;
+    let showcase = null;
+    let activeIndex = null;
+    let homeScrollCleanup = null;
+
+    // Helper to get dynamic elements (since we wipe toggle innerHTML)
+    function getContentEl() { return document.getElementById("content"); }
+    function getShowcaseEl() { return document.querySelector(".showcase"); }
+
+    function makeTile(i) {
+      const btn = document.createElement("button");
+      btn.className = "tile";
+      btn.dataset.index = i < 10 ? `0${i}` : i;
+
+      // 기본 이미지
+      const img = document.createElement("img");
+      img.src = `images/${i}.png`;
+      img.dataset.default = `images/${i}.png`;
+      img.dataset.hover = `images/${i}-2.png`;
+      img.dataset.active = `images/${i}-3.png`;
+      img.dataset.expandedHover = `images/${i}-4.png`;
+
+      // 엑스레이 배경 (n-2를 가리기 위함)
+      const xrayBg = document.createElement("div");
+      xrayBg.className = "xray-bg";
+      xrayBg.style.clipPath = `inset(100%)`; // 초기엔 숨김
+
+      // 엑스레이 이미지 (n-3)
+      const xrayImg = document.createElement("img");
+      xrayImg.className = "xray-image";
+      xrayImg.src = `images/${i}-3.png`;
+
+      // X-ray 효과를 위한 clip-path 초기화 (보이지 않게)
+      xrayImg.style.clipPath = `inset(100%)`;
+
+      btn.appendChild(img);
+      btn.appendChild(xrayBg);
+      btn.appendChild(xrayImg);
+
+      btn.addEventListener("mousemove", (e) => {
+        // 활성화(확대)된 상태가 아닐 때만 엑스레이 효과 적용
+        if (activeIndex !== i) {
+          const rect = btn.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+
+          // 커서 크기(48px)의 절반 = 24px
+          const half = 24;
+
+          // inset(top right bottom left) 값 계산
+          const top = y - half;
+          const bottom = rect.height - (y + half);
+          const left = x - half;
+          const right = rect.width - (x + half);
+
+          // inset을 사용하여 사각형 마스크 적용
+          const clipRules = `inset(${top}px ${right}px ${bottom}px ${left}px)`;
+          xrayImg.style.clipPath = clipRules;
+          xrayBg.style.clipPath = clipRules;
+        }
+      });
+
+      btn.addEventListener("mouseenter", () => {
+        if (activeIndex === i) {
+          img.src = img.dataset.expandedHover;
+          xrayImg.style.opacity = "0";
+          xrayBg.style.opacity = "0";
+        } else {
+          img.src = img.dataset.hover;
+          xrayImg.style.opacity = "1";
+          xrayBg.style.opacity = "1";
+        }
+      });
+
+      btn.addEventListener("mouseleave", () => {
+        const hideClip = `inset(100%)`;
+        xrayImg.style.clipPath = hideClip;
+        xrayBg.style.clipPath = hideClip;
+
+        if (activeIndex === i) {
+          img.src = img.dataset.active;
+        } else {
+          img.src = img.dataset.default;
+        }
+      });
+
+      btn.addEventListener("click", () => setActive(i));
+
+      return btn;
+    }
+
+    function setActive(i) {
+      const tiles = Array.from(grid.children);
+      const firstRects = new Map();
+      tiles.forEach(tile => firstRects.set(tile, tile.getBoundingClientRect()));
+
+      const previous = grid.querySelector(".tile.active");
+
+      if (previous) {
+        previous.classList.remove("active");
+        previous.querySelector("img").src = previous.querySelector("img").dataset.default;
+      }
+
+      let tile = grid.querySelector(`.tile[data-index='${i}']`);
+      if (!tile) {
+        const padded = i < 10 ? `0${i}` : i;
+        tile = grid.querySelector(`.tile[data-index='${padded}']`);
+      }
+      const img = tile.querySelector("img");
+
+      if (activeIndex === i) {
+        activeIndex = null;
+        img.src = img.dataset.default;
+        // Don't error out if not found
+        document.querySelector(".rotated-title")?.remove();
+        resetRightToHome();
+      } else {
+        activeIndex = i;
+        tile.classList.add("active");
+        img.src = img.dataset.active;
+
+        document.querySelector(".rotated-title")?.remove();
+        if (homeScrollCleanup) {
+          homeScrollCleanup();
+          homeScrollCleanup = null;
+        }
+
+        // Standard structure for details (applied to ALL items now from #1 template)
+        rightPane.innerHTML = `
+            <div class="right-scroll-container">
+              <div class="showcase"></div>
+              <article class="content" id="content"></article>
+              <div class="home-footer">
+                Copyright ⓒ 2025 JaeHyun Jeong. All rights reserved.
+              </div>
+            </div>
+          `;
+        loadDetail(i);
+      }
+
+      requestAnimationFrame(() => {
+        tiles.forEach(tile => {
+          const first = firstRects.get(tile);
+          const last = tile.getBoundingClientRect();
+
+          const dx = first.left - last.left;
+          const dy = first.top - last.top;
+          const dw = first.width / last.width;
+          const dh = first.height / last.height;
+
+          if (dx === 0 && dy === 0 && Math.abs(dw - 1) < 0.01 && Math.abs(dh - 1) < 0.01) return;
+
+          tile.animate([
+            {
+              transformOrigin: 'top left',
+              transform: `translate(${dx}px, ${dy}px) scale(${dw}, ${dh})`
+            },
+            {
+              transformOrigin: 'top left',
+              transform: 'none'
+            }
+          ], {
+            duration: 500,
+            easing: 'cubic-bezier(0.25, 1, 0.5, 1)'
+          });
+        });
+      });
+    }
+
+    // Data structure for each bird's details
+    const birdData = [];
+
+    // 01
+    birdData[1] = {
+      id: "01",
+      title: "검독수리",
+      scientificName: "Aquila chrysaetos",
+      taxonomy: {
+        phylum: "척삭동물문",
+        class: "조강",
+        order: "매목",
+        family: "수리과",
+        genus: "검독수리속"
+      },
+      history: [
+        { year: "2022", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2017", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2012", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2005", text: "멸종위기 야생동·식물 I급 지정" },
+        { year: "1998", text: "멸종위기 야생동·식물 및 보호<br>야생동·식물 지정" }
+      ],
+      description: `
+        <p>몸길이는 66~90cm, 날개 편 길이는 180~234cm이며, 체중은 수컷이 2.8~4.6kg, 암컷이 3.6~6.7kg으로 암컷이 평균적으로 더 크다. 전체적으로 짙은 갈색을 띠며, 뒷머리에서 목에 걸쳐 황갈색이다. 어린 새는 날개 가운데와 꽁지깃 안쪽이 흰색이다. 부리는 갈고리 모양처럼 밑으로 굽어졌으며 검은색이고 기부는 엷은 회색이다.</p>
+        <p>전 세계에서 큰 맹금류 중 하나로 두루미류, 가축, 중대형 포유류도 사냥할 수 있다. 날개가 길고, 발가락을 제외하고 발목까지 모두 깃털로 덮여있다.</p>
+      `,
+      threats: `
+        <p>서식처의 감소가 대표적인 위협요인이며, 이외에도 납중독, 전깃줄 및 풍력발전기와의 충돌 등이 추가적인 위협요인으로 작용하고 있다.</p>
+      `,
+      ecology: {
+        features: `
+          <p>1~2월에 짝을 형성하고, 3~4월에 산란한다. 푸른색을 띤 흰색 알을 1~4개 낳는다. 포란 기간은 44~45일이며, 육추 기간은 77일이다.</p>
+          <p>활동할 때 날개를 위로 약간 들어 올려 밋밋한 V자 모양을 이룬다.</p>
+        `,
+        habitat: `
+          <p>암벽의 오목한 곳이나 교목의 나뭇가지 위에 마른 가지를 쌓고 번식지 주변의 다양한 식물의 잎이나 줄기 등을 깔아 둥지를 만든다.</p>
+          <p>겨울에는 하천, 평야, 해안이나 평지에서 생활한다.</p>
+        `,
+        food: `
+          <p>토끼, 다람쥐, 꿩, 오리류 등을 잡아먹는다.</p>
+        `
+      },
+      distribution: {
+        domestic: `
+          <p>겨울에 강원도 철원군, 경기도 파주시, 연천군, 충청남도 서산시, 전라남도 영암군, 경상북도 구미시, 부산광역시 등에 적은 수가 도래한다.</p>
+          <p>과거 경기도와 강원도에서 번식 기록이 있었으나 최근에는 번식이 확인되지 않고 있다.</p>
+        `,
+        overseas: `
+          <p>구북부와 신북구에 걸쳐 널리 분포한다.</p>
+        `
+      }
+    };
+
+    // 02
+    birdData[2] = {
+      id: "02",
+      title: "고니",
+      scientificName: "Cygnus columbianus",
+      taxonomy: {
+        phylum: "척삭동물문",
+        class: "조강",
+        order: "기러기목",
+        family: "오리과",
+        genus: "고니속"
+      },
+      history: [
+        { year: "2022", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2017", text: "멸종위기 야생생물 Ⅱ급 지정" },
+        { year: "2012", text: "멸종위기 야생생물 Ⅱ급 지정" },
+        { year: "2005", text: "멸종위기 야생동·식물 Ⅱ급 지정" },
+        { year: "1998", text: "멸종위기 야생동·식물 및 보호<br>야생동·식물 지정" }
+      ],
+      description: `
+        <p>몸길이는 120~150cm, 체중은 약 3.4~7.8kg이다. 암수 모두 온몸이 흰색이며, 부리는 검은색, 윗부리 기부는 노란색이다. 노란색 부분이 검은색 부분보다 작고, 끝이 둥그렇다. 어린 새는 온몸이 회갈색이며 부리는 연한 분홍색으로 끝이 검다. 다리는 짧고, 검은색이다. 큰고니보다는 크기가 작으며 부리의 노란 부분이 좁다.</p>
+      `,
+      threats: `
+        <p>갯벌과 습지의 매립으로 인해 서식처가 단편화되어 취식지와 먹이원이 줄어들고 있으며, 최근 20여 년간 국내 월동 개체수가 매우 감소하였다.</p>
+      `,
+      ecology: {
+        features: `
+          <p>습지에서 사초과의 식물, 버드나무 등 다양한 식물을 이용하여 화산 모양의 둥지를 만들고,  4~5월경 3~5개의 알을 낳는다.</p>
+        `,
+        habitat: `
+          <p>강 하구나 바닷가, 호수, 초습지, 농경지 등에 서식한다.</p>
+        `,
+        food: `
+          <p> 얕은 호수나 늪지대 등에서 물속에 머리를 넣어 꼬리를 하늘로 들고 물풀의 잎, 줄기,  뿌리와 어류, 갑각류, 수서곤충 등을 먹는다.</p>
+        `
+      },
+      distribution: {
+        domestic: `
+          <p>해안지역의 하구, 호수, 석호, 간척지 등에서 주로  월동하며, 충주호, 팔당호 등 내륙의 호수 및 저수지에서도  월동한다.</p>
+        `,
+        overseas: `
+          <p>유라시아 북부, 알래스카, 캐나다 북부에서 번식하고  미국 서부, 유럽 서부, 카스피해 주변, 중국 동부, 일본에서  월동한다</p>
+        `
+      }
+    };
+
+    // 03
+    birdData[3] = {
+      id: "03",
+      title: "넓적부리도요",
+      scientificName: "Eurynorhynchus pygmeus",
+      taxonomy: {
+        phylum: "척삭동물문",
+        class: "조강",
+        order: "도요목",
+        family: "도요과",
+        genus: "넓적부리도요속"
+      },
+      history: [
+        { year: "2022", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2017", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2012", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2005", text: "멸종위기 야생동·식물 I급 지정" },
+        { year: "1998", text: "멸종위기 야생동·식물 및 보호<br>야생동·식물 지정" }
+      ],
+      description: `
+        <p>몸길이는 14.5cm로 부리는 검은색이고, 끝이 주걱 모양으로 생겼다. 여름철에는 머리, 가슴 등이 붉은 갈색을 띠며, 가슴에는 어두운 갈색 줄무늬가 있다. 겨울철에는 몸 윗면이 엷은 회색으로 변하며, 동시에 눈썹 선과 가슴은 흰색으로 변한다. 다리는 항상 검은색이다</p>
+      `,
+      threats: `
+        <p>중간 기착지인 서해안 갯벌 매립 및 개발로 인한 서식지 감소와 월동지에서의 남획으로 인해 개체수가 급격히 줄어들고 있으며, 2014~2019년 자료 분석 결과, 번식 가능한 개체수는 490마리로 추정되었다.</p>
+      `,
+      ecology: {
+        features: `
+          <p>번식기는 6월 하순~7월 중순이며, 한 번에 4개 정도의 알을 낳는다.</p>
+          <p>봄, 가을 시기의 번식지에서 월동지로의 이동 중에 국내를 통과하는 나그네새이며, 매우 적은 수가 통과한다. 국내에는 가을 시기에 관찰기록이 더 많다.</p>
+        `,
+        habitat: `
+          <p>하구, 호수, 습지 주변의 초지에서 번식하며, 비번식기에는 간척지, 염전, 소택지, 하구, 해안 등 모래가 섞여 있는 갯벌을 선호한다</p>
+        `,
+        food: `
+          <p>번식기에는 나방, 모기, 파리, 거미 등 곤충류를 잡아먹고, 중간 기착지의 해안에서  갯지렁이, 작은 새우류와 같은 해양무척추동물을 먹이로 한다.</p>
+        `
+      },
+      distribution: {
+        domestic: `
+          <p>봄, 가을 이동 시기에 서해안과 남해안의 갯벌과 하구에서 매우 적은 수가 도래한다. 주로 유부도, 낙동강  하구 등에서 소수만이 관찰되며, 2017년부터 2020년까지 25개체만이 관찰된 기록이 있다.</p>
+        `,
+        overseas: `
+          <p>극동 러시아의 툰드라 해안에서 번식하며, 번식을 마친 후 동아시아 해안을 따라 러시아, 일본, 북한, 중국, 홍콩, 대만 등을 경유해 방글라데시, 미얀마, 태국 등지에서 월동한다.</p>
+        `
+      }
+    };
+
+    // 04
+    birdData[4] = {
+      id: "04",
+      title: "노랑부리백로",
+      scientificName: "Egretta eulophotes",
+      taxonomy: {
+        phylum: "척삭동물문",
+        class: "조강",
+        order: "황새목",
+        family: "백로과",
+        genus: "백로속"
+      },
+      history: [
+        { year: "2022", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2017", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2012", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2005", text: "멸종위기 야생동·식물 I급 지정" },
+        { year: "1998", text: "멸종위기 야생동·식물 및 보호<br>야생동·식물 지정" }
+      ],
+      description: `
+        <p>몸길이는 65~68cm, 체중은 390~540g이며, 몸 전체가 흰색이고 눈은 흐린 노란색, 눈가는 파란색이다. 번식기에는 부리는 노란색, 다리는 검은색, 발은 노란색이며, 머리 뒤로 긴 장식깃 다발이 발달한다. 번식이 끝나면 부리가 흑갈색으로 변하고, 장식깃이 없어진다. 다리는  노란색을 띤 녹색으로 변한다</p>
+      `,
+      threats: `
+        <p>갯벌과 하구의 매립, 무인도서 개발 등으로 인한 서식처 소실과 악화가 가장 큰 위협요인이며, 그 외에 번식지에서의 낚시나 알 채집 등 인간의 간섭, 식생 부족에 따른 둥지 자원 부족, 무인도 내에서의 동종 간 또는 타종 간 경쟁 등이  추가적인 위협요인이다.</p>
+      `,
+      ecology: {
+        features: `
+          <p>4~5월쯤 번식지에 도래하여 관목 위나 땅에 명아주, 비쑥 등 마른 가지를 모아 둥지를 만들고 옅은 청록색 알을 2~5개 낳는다. 포란 기간은 21~26일이며, 부화한 새끼를 키우는 기간인 육추 기간은 36~40일이다.
+        뛰면서 먹이를 쫓아가거나, 물속을 반복적으로 찌르는 등 활발하게 움직이며 먹이활동  하는 것이 특징이다</p>
+          <p>뛰면서 먹이를 쫓아가거나, 물속을 반복적으로 찌르는 등 활발하게 움직이며 먹이활동 하는 것이 특징이다.</p>
+        `,
+        habitat: `
+          <p>서해안의 무인도서에서 번식하며, 해안가의 갯벌, 염전 등에 주로 서식한다. 단독 또는 작은 무리를 이루어 먹이활동을 하지만 가을철 이동 시기에는 많은 수가 무리를 형성하기도 한다.</p>
+        `,
+        food: `
+          <p>갯벌이나 바다가 가까운 습지의 수심이 얕은 곳에서 물고기, 게, 새우 등의 갑각류, 갯지렁이 등을 잡아먹는다. 강화 남단 갯벌, 한강 하구, 안면도, 천수만 등지에서 여름철 먹이 활동하는 모습이 관찰되기도 한다.</p>
+        `
+      },
+      distribution: {
+        domestic: `
+          <p>서해안을 중심으로 남해안 일대까지 분포하며, 드물게 동해안에 도래한다. 서해안의 무인도서에서 번식하고 봄부터 가을까지 갯벌 지역과 갯벌과 인접한 농경지, 하구 등에서 관찰된다.</p>
+        `,
+        overseas: `
+          <p>비번식기에는 일본, 홍콩, 대만, 태국, 베트남, 필리핀, 말레이시아, 싱가폴, 부르나이, 인도네시아 등지에 분포한다.</p>
+        `
+      }
+    };
+
+    // 05
+    birdData[5] = {
+      id: "05",
+      title: "느시",
+      scientificName: "Otis tarda",
+      taxonomy: {
+        phylum: "척삭동물문",
+        class: "조강",
+        order: "두루미목",
+        family: "느시과",
+        genus: "느시속"
+      },
+      history: [
+        { year: "2022", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2017", text: "멸종위기 야생생물 Ⅱ급 지정" },
+        { year: "2012", text: "멸종위기 야생생물 Ⅱ급 지정" },
+        { year: "2005", text: "멸종위기 야생동·식물 Ⅱ급 지정" },
+        { year: "1998", text: "멸종위기 야생동·식물 및 보호<br>야생동·식물 지정" }
+      ],
+      description: `
+        <p>몸길이는 수컷 90~105cm, 암컷 75~85cm이며, 체중은 3~18kg이다. 암수가 거의 같은 빛깔로, 등은 붉은 갈색 바탕에 검은색 가로무늬가 있다. 부리는 옅은 회색이며, 머리와 목은 푸른빛을 띤 연한 회색이다. 날 때 날개 윗면은 검은색 날개깃과 흰 날개덮깃의 뚜렷한 차이가 나타난다. 번식기의 수컷은 턱에 길게 늘어진 흰색 깃털을 가지고 있어 턱수염처럼 보이며, 가슴에는  적갈색 띠가 있다. 번식이 끝나면 턱의 긴 깃털이 사라지고 목과 가슴 전체가 옅은 회색이 된다.  암컷은 비번식기 수컷과 유사하며, 크기가 작다.</p>
+      `,
+      threats: `
+        <p>농업의 집약화가 가장 큰 개체군의 감소 원인이며, 서식처 악화, 불법 사냥, 농약 사용, 전깃줄 충돌 등이 추가적인 위협 요인으로 개체수가 감소하고 있다.</p>
+      `,
+      ecology: {
+        features: `
+          <p>땅 위에서 번식하며, 4~6월에 보통 2~3개의 알을 낳는다. 포란 기간은 25일, 부화한 새끼를  키우는 기간인 육추 기간은 30~35일이며, 어린새는 부화 80~120일 후에 성조 크기에 도달한다. 수컷은 목과 부채꼴 꽁지깃을 세우고 날개를 뒤집어 과시하는 구애 행동을 한다.</p>
+          <p>전 세계 개체수의 반 이상이 스페인에 서식하고 있다</p>
+        `,
+        habitat: `
+          <p>광활한 평야, 건조한 구릉의 초지, 초원 등지에 주로 서식하며, 최근 농경지와 목초지 등에서도 관찰되고 있다.</p>
+        `,
+        food: `
+          <p>잡식성으로 씨앗과 같은 식물성 먹이와 곤충을 주로 먹는다.</p>
+        `
+      },
+      distribution: {
+        domestic: `
+          <p>과거에는 흔했던 겨울철새로 100개체 이상 도래한 기록도 있지만 점차 개체수가 줄어들어 1970년대 이후로 거의 관찰되지 않는다. 최근에 2017년 1월 여주시, 2020년 1월 만경강, 2023년 1월 철원에서 관찰된 기록이 있다.</p>
+        `,
+        overseas: `
+          <p>스페인, 터키, 포르투갈, 러시아, 헝가리 등 여러 유럽  지역과 우리나라를 포함한 몽골, 중국 등 아시아 지역에 분포한다. 서식처가 서로 연결되지 않고 불연속적으로 분포하고 있다.</p>
+        `
+      }
+    };
+
+    // 06
+    birdData[6] = {
+      id: "06",
+      title: "두루미",
+      scientificName: "Grus japonensis",
+      taxonomy: {
+        phylum: "척삭동물문",
+        class: "조강",
+        order: "두루미목",
+        family: "두루미과",
+        genus: "두루미속"
+      },
+      history: [
+        { year: "2022", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2017", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2012", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2005", text: "멸종위기 야생동·식물 I급 지정" },
+        { year: "1998", text: "멸종위기 야생동·식물 및 보호<br>야생동·식물 지정" }
+      ],
+      description: `
+        <p>몸길이 136~150cm, 체중 7~12kg, 날개 편 길이 220~250cm에 이르는 대형 조류이다. 이마, 머리 꼭대기, 눈 앞에는 깃털이 없고 붉은색의 피부가 드러나 있다. 몸은 흰색이며, 멱・목에 걸친 부위는 검은색, 눈 뒤, 귀깃, 뒷머리는 흰색이다. 부리는 옅은 노란색이며 끝부분이 밝다. 둘째날개깃, 셋째날개깃, 다리는 검은색이다. 이런 특징으로 인해 걸을 때 꽁지가 검은 것처럼  보이기도 한다. 어린 새의 경우 머리와 목, 몸의 윗면이 연한 갈색이다. 그 외의 깃털은 흰색이며, 깃털 끝부분은 황갈색이다.</p>
+      `,
+      threats: `
+        <p>서식처의 감소가 가장 큰 위협요인이다. 사람들이 알을 채집해 먹거나 농약 중독, 비행 중 전깃줄과의 충돌도 위협요인이다. 서식처 감소로 이후 남아있는 서식처에 도래하는 개체수가 점점 증가함에 따라 질병으로 인한 집단폐사의 위험성이 높아지고 있다.</p>
+      `,
+      ecology: {
+        features: `
+          <p>4~5월경에 2개의 알을 낳는다. 암수가 함께 품어서 약 32~33일이면 새끼가 부화하고, 부화한 후에는 6개월가량 어미 새의 보호를 받는다.</p>
+          <p>2~3월에 암수가 마주 보고 부리를 하늘로 향하고 반복해 우는 구애 행동을 볼 수 있다.</p>
+        `,
+        habitat: `
+          <p>월동지에서는 주로 농경지 또는 갯벌에서 섭식하며, 결빙된 저수지, 강의 모래톱 등을 잠자리로 이용한다. 번식지에서는 갈대 및 부들 등이 자라는 습지 또는 초습지에 서식한다.</p>
+        `,
+        food: `
+          <p>우리나라의 경우 주로 민간인 통제지역 일대의 논, 율무밭, 옥수수밭 등에서 낟알을 먹는다. 그 외 곤충, 미꾸라지, 올챙이, 갯지렁이, 다슬기, 설치류 등을 잡아먹기도 한다.</p>
+        `
+      },
+      distribution: {
+        domestic: `
+          <p>강원도 철원군, 경기도 연천군, 파주시, 강화군 등  주로 비무장지대와 민간인 통제지역 일대가 대표적인 월동지이다.</p>
+        `,
+        overseas: `
+          <p>러시아 동남부 한카호, 중국 동북 지방 등에서 번식 하고 중국 중동부 등지에서 월동한다. 일본 훗카이도에는 연중 서식하는 개체군이 있다</p>
+        `
+      }
+    };
+
+    // 07
+    birdData[7] = {
+      id: "07",
+      title: "먹황새",
+      scientificName: "Ciconia nigra",
+      taxonomy: {
+        phylum: "척삭동물문",
+        class: "조강",
+        order: "황새목",
+        family: "황새과",
+        genus: "황새속"
+      },
+      history: [
+        { year: "2022", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2017", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2012", text: "멸종위기 야생생물 Ⅱ급 지정" },
+        { year: "2005", text: "멸종위기 야생동·식물 Ⅱ급 지정" }
+      ],
+      description: `
+        <p>몸길이는 90~100cm로 대형 조류이다. 몸은 전체적으로 녹색과 보라색 광택이 있는 검은색이며, 부리와 다리, 눈 주위가 붉고 가슴과 배 부분이 흰색이다. 뒷머리에 약간 돌출된 깃은 근거리에서 확인이 가능하다. 날 때 몸 안쪽의 아래날개덮깃 일부가 흰색으로 보인다. 어린 새는 부리와 눈 주위가 녹색을 띤 회색이며 다리는 녹색을 띤 노란색이다. 몸 윗면에 녹색 광택이 거의 없으며 목 부분에 작은 흰색 반점이 흩어져 있다.</p>
+      `,
+      threats: `
+        <p>각종 개발 및 오염으로 인한 서식처 감소와 악화, 먹이자원의 감소, 포획, 구조물 충돌 등이 위협요인이다.</p>
+      `,
+      ecology: {
+        features: `
+          <p>둥지는 암벽이나 나무 위에 나뭇가지를 모아 매우 크게 만들며, 여러 해에 걸쳐 사용하는  경우가 잦다. 번식기는 3월 중순~5월이며, 일반적으로 한 번에 약 3~4개의 알을 낳는다. 포란  간은 32~38일이며, 부화한 새끼를 키우는 기간인 육추 기간은 63~71일이다.</p>
+          <p>겨울철새이며 한반도를 통과하는 나그네새이다. 10월 중순에 도래하여 3월 하순까지  관찰된다.</p>
+        `,
+        habitat: `
+          <p>주로 농경지, 강, 하구, 저수지, 하천, 풀이 우거진 습지 등에 서식한다.</p>
+        `,
+        food: `
+          <p>어류, 양서류, 파충류 등을 잡아먹는다.</p>
+        `
+      },
+      distribution: {
+        domestic: `
+          <p>과거 안동시에 번식했던 기록이 있지만 1968년 이후 번식기록이 없다. 부산광역시의 낙동강 하류, 천수만, 제주도 등지 에서 매우 적은 수가 월동한다.</p>
+        `,
+        overseas: `
+          <p>동아시아 일대와 남아프리카, 서남유럽, 중앙・동유럽 일대에 분포한다.</p>
+        `
+      }
+    };
+
+    // 08
+    birdData[8] = {
+      id: "08",
+      title: "뿔제비갈매기",
+      scientificName: "Thalasseus bernsteini",
+      taxonomy: {
+        phylum: "척삭동물문",
+        class: "조강",
+        order: "도요목",
+        family: "갈매기과",
+        genus: ""
+      },
+      history: [
+        { year: "2022", text: "멸종위기 야생생물 I급 지정" },
+      ],
+      description: `
+        <p>몸길이는 38~43cm, 체중은 240~320g이다. 부리는 주황빛에 가까운 노란색이며, 부리 끝에 검은색이 있다. 번식기에는 이마부터 눈선 아래, 머리 뒤까지 검은색이며, 머리 뒷부분에 갈기 형태의 뿔이 특징이다. 번식기 이후에는 이마와 정수리 부분이 흰색으로 바뀐다. 등은 옅은  회색이며, 다리는 검은색이다. 어린 새는 등과 날개에 회색 반점이 흩어져 있으며, 다리는 노란색이다.</p>
+      `,
+      threats: `
+        <p>번식지에서의 알 채집이 가장 심각한 위협요인이며, 그 외  서식처 악화, 교란, 어류 남획, 태풍으로 인한 집단 번식 실패 등의 위협요인이 있다.</p>
+      `,
+      ecology: {
+        features: `
+          <p>국내에서는 3월 중순~말쯤에 도래하여 4월에 산란하고, 중국에서는 6월경에 산란한다. 알은  1개를 낳으며, 포란 기간은 22~28일, 부화한 새끼를 키우는 기간인 육추 기간은 31~35일이다.</p>
+          <p>활현재 전 세계적으로 100개체 미만으로 추정되고 있어 보호가 시급한 상태이다</p>
+        `,
+        habitat: `
+          <p>주로 연안의 무인도서에서 번식하며, 우리나라 육산도는 세계에서 5번째로 확인된 번식지이다.</p>
+        `,
+        food: `
+          <p>성조는 번식지 주변 5km 이내에서 먹이활동을 하며, 어린 새에게 작은 물고기를 먹인다.</p>
+        `
+      },
+      distribution: {
+        domestic: `
+          <p>2016년부터 우리나라 전라남도 영광군 육산도에서 번식이 확인되었다.</p>
+        `,
+        overseas: `
+          <p>중국 및 대만의 4개 무인도에서 소수 개체가 번식 한다. 2000년 중국 남부의 섬에서 4쌍의 번식 개체가  재발견되었고, 2018년 성조 77개체가 중국 번식지에서 확인되었다. 현재 전 세계에 서식하는 개체수는 약 100개체 정도로 추정하고 있다.</p>
+        `
+      }
+    };
+
+    // 09
+    birdData[9] = {
+      id: "09",
+      title: "저어새",
+      scientificName: "Platalea minor",
+      taxonomy: {
+        phylum: "척삭동물문",
+        class: "조강",
+        order: "황새목",
+        family: "저어새과",
+        genus: "저어새속"
+      },
+      history: [
+        { year: "2022", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2017", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2012", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2005", text: "멸종위기 야생동·식물 I급 지정" },
+        { year: "1998", text: "멸종위기 야생동·식물 및 보호<br>야생동·식물 지정" }
+      ],
+      description: `
+        <p>몸길이 60~78.5cm의 중대형 조류이다. 몸은 전체적으로 흰색이며, 부리와 다리는 검은색이다. 주걱처럼 생긴 긴 부리는 윗면에 주름이 많이 있는데, 사람의 지문처럼 개체별로 그 형태가 모두 다르다. 번식기에는 머리 뒤로 긴 장식깃과 노란색 가슴 띠가 생긴다. 어린 개체는 부리가 분홍빛이 도는 회색이며, 주름이 없고 날개 끝이 검은색이다.</p>
+      `,
+      threats: `
+        <p>국제적 보전 노력을 통해 최근 30년간 개체수가 약 300개체에서 6,600개체로 증가하였지만 서해안 지역의 갯벌 매립, 해안 개발로 인해 서식처가 감소하고 있다. 그 외에 낚싯줄에 의한 피해, 알 채집, 번식지 내 포식자 유입, 오염물질 증가, 집단 서식처의 질병 발생과 같은 요인들이 위협요인으로 지목되고 있다.</p>
+      `,
+      ecology: {
+        features: `
+          <p>개체군의 90% 이상이 국내에서 번식한다. 둥지는 나뭇가지를 이용하여, 바위틈이나 땅위에 만든다. 번식기는 4~7월로, 4~5월에 2~4개의 알을 낳는다. 포란 기간은 약 25일이며, 부화한 새끼를 키우는 기간인 육추 기간은 약 40일이다.</p>
+        `,
+        habitat: `
+          <p>연안의 무인도에서 번식하고 갯벌, 강 하구, 저수지, 연안의 담수습지 등에서 생활하며, 번식기에는 해안가의 논에서도 먹이활동을 한다.</p>
+        `,
+        food: `
+          <p>소형 어류, 새우류, 게류, 개구리, 올챙이, 유충 등을 주로 잡아먹는다.</p>
+        `
+      },
+      distribution: {
+        domestic: `
+          <p>서해안의 무인도서와 인천광역시 연안 등에서 번식하며, 번식지 대부분이 인천만 및 경기만 일대에 위치한다. 이동 시기 동안에는 강화도, 영종도, 송도 갯벌 일대, 안산시 시화호, 화성시 화옹호, 새만금 간척지 등의 연안 습지를 주로 이용한다. 겨울에는 제주도에서 적은 수가 월동하며, 동쪽 해안의 성산리, 종달리 해안, 하도리 양어장 등이 주요 월동지로 이용되고 있다.</p>
+        `,
+        overseas: `
+          <p>중국 및 러시아 동북부, 북한에서 소수가 번식한다. 최대 월동지인 대만 남부 타이난 지역을 포함하여, 일본 규슈, 홍콩, 베트남, 남중국, 필리핀, 태국 등에서 월동한다.</p>
+        `
+      }
+    };
+
+    // 10
+    birdData[10] = {
+      id: "10",
+      title: "참수리",
+      scientificName: "Haliaeetus pelagicus",
+      taxonomy: {
+        phylum: "척삭동물문",
+        class: "조강",
+        order: "매목",
+        family: "수리과",
+        genus: "흰꼬리수리속"
+      },
+      history: [
+        { year: "2022", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2017", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2012", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2005", text: "멸종위기 야생동·식물 I급 지정" },
+        { year: "1998", text: "멸종위기 야생동·식물 및 보호<br>야생동·식물 지정" }
+      ],
+      description: `
+        <p>몸길이는 88~105cm, 체중은 수컷 5~6kg, 암컷 7~9kg, 날개 편 길이는 195~245cm로 대형  맹금류에 속한다. 커다란 부리와 쐐기형 꽁지가 특징이다. 눈 앞의 깃은 노란색이다. 이마와 어깨,  허리와 윗꽁지덮깃, 꽁지깃은 흰색이며, 다른 부분은 어두운 갈색을 띤다. 날 때 날개의 뒤쪽이 둥글게 보이며, 날개 끝 쪽으로 갈수록 넓게 보인다. 어린 새의 몸은 전반적으로 검은 색을 띠며, 꽁지는 흰색이지만 가장자리는 갈색을 띠고, 첫째날개깃과 날개덮깃은 부분적으로 흰색을 띤다.</p>
+      `,
+      threats: `
+        <p>해안과 인접한 산림의 개발과 인간 활동에 의한 서식처 훼손으로 인해 개체수가 감소하고 있다. 납 탄환으로 인한 납 중독, 강 오염, 사냥도 추가적인 위협요인이다.</p>
+      `,
+      ecology: {
+        features: `
+          <p>나뭇가지로 최대 2.5m 넓이의 큰 둥지를 만들어 4~5월에 산란하며, 산란 수는 1~3개, 포란 기간은 38~45일, 부화한 새끼를 키우는 기간인 육추 기간은 70일이다.</p>
+          <p>참수리속(Haliaeetus) 중 가장 큰 대형 맹금류이다.</p>
+        `,
+        habitat: `
+          <p>번식기에는 숲이 있는 해안 및 강에서 서식하며, 해안가의 절벽이나 언덕, 나무 위에  둥지를 만들어 생활한다. 겨울철에는 대부분 강에서 생활하며, 호수변 및 해안에서도 서식이 확인되고 있다.</p>
+        `,
+        food: `
+          <p>주로 물고기를 먹으며, 작은 포유류나 오리, 갈매기 등의 조류도 잡아먹는다.</p>
+        `
+      },
+      distribution: {
+        domestic: `
+          <p>겨울철새로 우리나라 전역의 해안 및 하구, 대규모 간척지 등에 불규칙하게 도래한다.</p>
+        `,
+        overseas: `
+          <p>오호츠크 해안, 캄차카, 사할린 등에서 번식하며, 월동기에는 우수리, 일본 등에 분포한다. 전 세계적으로는 약 6,000~7,000개체가 남아 있는 것으로 추정하고 있다.</p>
+        `
+      }
+    };
+
+    // 11
+    birdData[11] = {
+      id: "11",
+      title: "청다리도요사촌",
+      scientificName: "Tringa guttifer",
+      taxonomy: {
+        phylum: "척삭동물문",
+        class: "조강",
+        order: "도요목",
+        family: "도요과",
+        genus: "삑삑도요속"
+      },
+      history: [
+        { year: "2022", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2017", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2012", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2005", text: "멸종위기 야생동·식물 I급 지정" },
+        { year: "1998", text: "멸종위기 야생동·식물 및 보호<br>야생동·식물 지정" }
+      ],
+      description: `
+        <p>몸길이는 약 28.5~34cm, 체중은 125~170g이다. 길고 굵은 부리는 살짝 위로 휘어져 있으며, 끝이 검고 기부는 노란색을 띤다. 다리는 초록색을 띠는 노란색이며, 다른 도요새류와 비교했을 때 몸에 비해 다리가 짧은 것이 특징이다. 여름깃은 머리와 가슴에 검은색의 반점이 있으며, 몸의 윗면은 어두운 회갈색이다. 홍채는 어두운 갈색이다. 겨울깃은 머리와 목에 줄무늬가 옅으며, 몸의 윗면은 옅은 회색이다. 날 때 다리가 꼬리 뒤로 약간 튀어나온다.</p>
+      `,
+      threats: `
+        <p>서해안 지역의 갯벌 매립과 해안 개발로 인한 서식처 소실이 개체수 감소의 대표적인 원인이며, 러시아의 서식처도 석유 산업 관련 개발로 악화되고 있다. 밀렵, 해안 습지 오염도 또 다른 위협요인 중 하나이다.</p>
+      `,
+      ecology: {
+        features: `
+          <p>번식기가 되면 등과 날개에 흰색 반점 무늬가 생기고 선명해지며, 목 아래쪽에 검은색 초승달 모양의 무늬가 생긴다. 다른 도요새류와 비교했을 때 몸보다 다리가 짧은 것이 특징이다.</p>
+          <p>땅 위 또는 나무 위에서 5월 하순에서 6월 중순에 번식하며, 알은 한 번에 약 4개 정도 낳는다. 어린 새는 7~8월에 이소한다. 알은 청록색 바탕에 어두운 반점이 있다.</p>
+        `,
+        habitat: `
+          <p>이동 시기 및 월동기에는 해안 갯벌, 강 하구, 염전 등을 주로 이용한다. 번식지로는 잎갈나무 숲, 해안 저지대 습지, 갯벌 등을 이용한다.</p>
+        `,
+        food: `
+          <p>갑각류, 어류, 연체동물 등을 주로 잡아먹는다.</p>
+        `
+      },
+      distribution: {
+        domestic: `
+          <p>봄, 가을 이동 시기에 우리나라를 통과하는 나그네새로, 적은 수가 서해안과 남해안의 영종도, 송도갯벌, 경상남도의 낙동강 하구 등에 도래한다.</p>
+        `,
+        overseas: `
+          <p>사할린, 캄차카 반도, 오호츠크 연안, 아무르, 우수리 등 극동 러시아에서 번식하며 필리핀, 보르네오, 말레이 반도, 미얀마, 인도 중부 등에서 월동한다. 이동 시기에는 중국, 일본, 대만 등을 통과한다.</p>
+        `
+      }
+    };
+
+    // 12
+    birdData[12] = {
+      id: "12",
+      title: "크낙새",
+      scientificName: "Dryocopus javensis",
+      taxonomy: {
+        phylum: "척삭동물문",
+        class: "조강",
+        order: "딱다구리목",
+        family: "딱다구리과",
+        genus: "까막딱다구리속"
+      },
+      history: [
+        { year: "2022", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2017", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2012", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2005", text: "멸종위기 야생동·식물 I급 지정" },
+        { year: "1998", text: "멸종위기 야생동·식물 및 보호<br>야생동·식물 지정" }
+      ],
+      description: `
+        <p>몸길이 46cm로 국내 딱다구리과 조류 중 가장 크다. 몸은 전체적으로 검은색이고, 배, 허리, 날개  아랫면의 안쪽(아랫날개덮깃)은 흰색이다. 수컷은 이마부터 뒷머리까지 붉은색이고, 얼굴에  붉은 뺨선(뺨에 난 줄무늬)이 있기 때문에 머리가 전체적으로 검은 암컷과 구별된다. 부리는 검은색, 다리는 어두운 회색이다. 유사종인 까막딱다구리는 몸 전체가 검은색으로 크낙새와 쉽게 구별할 수 있다.</p>
+      `,
+      threats: `
+        <p>울창한 산림을 서식처로 이용하기 때문에 산림 개발로 인한 서식처 훼손에 취약하다. 국내 개체수 감소 또한 산림 소실 및 악화가 주요 원인일 것으로 추정하고 있다.</p>
+      `,
+      ecology: {
+        features: `
+          <p>암수가 같이 고목이나 반고사목에 구멍을 뚫어 둥지를 만든다. 번식기는 4~8월경이며 알은 흰색으로 한 번에 2~5개 정도를 낳아 암수가 교대로 14일 동안 포란한다. 대체로 암컷보다 수컷이 더 많이 포란한다.</p>
+          <p>국내 아종은 Dryocopus javensis richardsi로 한반도 및 대마도에만 분포하며, 크낙새 아종  중 가장 북쪽에 분포하는 아종이다.</p>
+        `,
+        habitat: `
+          <p>전나무, 잣나무, 소나무, 참나무, 밤나무 등의 활엽수와 침엽수가 함께 자라는 혼효림에  주로 서식하며, 수령이 100~300년 된 오래된 나무들이 있는 산림이 주요 서식처이다.</p>
+        `,
+        food: `
+          <p>나무껍질을 벗기고 구멍을 파서 큰 딱정벌레 애벌레를 잡아먹는다. 가을철에는 층층나무 열매 같은 식물성 먹이도 먹는다.</p>
+        `
+      },
+      distribution: {
+        domestic: `
+          <p>우리나라에서는 경기도 국립수목원, 수원시, 부산광역시 등 일부 제한된 지역에서 관찰된 기록이 있지만 1981년 이후 확인되지 않아 지역절멸된 것으로  추정하고 있다. 북한에는 개성 등 일부 지역에 서식하는 것으로 알려져 있으나 정확한 정보가 없다.</p>
+        `,
+        overseas: `
+          <p>인도, 미얀마, 중국, 태국, 인도네시아, 말레이시아, 브루나이 등에 분포한다.</p>
+        `
+      }
+    };
+
+    // 13
+    birdData[13] = {
+      id: "13",
+      title: "호사비오리",
+      scientificName: "Mergus squamatus",
+      taxonomy: {
+        phylum: "척삭동물문",
+        class: "조강",
+        order: "기러기목",
+        family: "오리과",
+        genus: "비오리속"
+      },
+      history: [
+        { year: "2022", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2017", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2012", text: "멸종위기 야생생물 Ⅱ급 지정" },
+        { year: "2005", text: "멸종위기 야생동·식물 Ⅱ급 지정" },
+        { year: "1998", text: "멸종위기 야생동·식물 및 보호<br>야생동·식물 지정" }
+      ],
+      description: `
+        <p>몸길이는 약 52~62cm, 체중은 1.1~1.4kg이다. 붉은색 부리 끝에 노란 점이 있으며, 다리는  붉은색, 홍채는 회갈색이다. 수컷 여름깃은 머리와 목에 초록색 광택이 나며, 댕기깃이 길다. 허리와 옆구리에 검은색 비늘무늬가 있고 가슴과 몸 아랫면은 흰색, 등은 회색이다. 암컷 머리는  연한 갈색이며 수컷에 비해 댕기가 짧다. 수컷의 겨울깃은 암컷과 유사하지만 윗날개의 흰 부분이 더 크고, 몸 옆면에 비늘무늬가 있는데 암컷 여름깃에는 없다는 점에서 구분된다.</p>
+      `,
+      threats: `
+        <p>국내의 경우, 하천 정비 등의 개발로 인해 개체수가 감소하고 있는 것으로 추정된다. 그 외 번식지에서의 산림 감소, 사람에 의한 교란, 불법 포획, 중금속 농축 등으로 인해 개체수가 감소하고 있다.</p>
+      `,
+      ecology: {
+        features: `
+          <p> 5~8월 사이에 번식하며, 한 번에 알을 8~10개 정도 낳는다. 강을 낀 산림 지역의 나무 구멍에 번식한다. 포란 기간은 31~35일이며, 어린 새는 부화 후 48~60시간 이내에 둥지 밖으로 나와  부모와 같이 다닌다. 약 8주 후에 독립한다.</p>
+          <p>전 세계 개체수는 3,600~6,800개체로 추정하고 있다.</p>
+        `,
+        habitat: `
+          <p>번식기에는 하층 식생의 밀도가 높으며 울창한 숲으로 둘러싸인 물살이 빠른 계곡을  서식처로 이용한다. 월동기 동안에는 교란이 적고 물살이 빠른 하천 중・상류를 이용하며, 그 외에 호수 및 저수지에서도 월동한다.</p>
+        `,
+        food: `
+          <p>작은 어류와 수서 무척추동물을 주로 먹는다./p>
+        `
+      },
+      distribution: {
+        domestic: `
+          <p>겨울철새이며, 소규모의 무리가 남한강, 북한강, 대청호 등의 산악지역에서 하천, 저수지, 해안 주변에 지적으로 분포한다</p>
+        `,
+        overseas: `
+          <p>우수리, 중국 동북 지방의 동북부에 번식하며, 중국의 남부와 중부 지역, 러시아 남동부, 일본 등에서 월동한다.</p>
+        `
+      }
+    };
+
+    // 14
+    birdData[14] = {
+      id: "14",
+      title: "흑고니",
+      scientificName: "Cygnus olor",
+      taxonomy: {
+        phylum: "척삭동물문",
+        class: "조강",
+        order: "기러기목",
+        family: "오리과",
+        genus: "고니속"
+      },
+      history: [
+        { year: "2022", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2017", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2012", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2005", text: "멸종위기 야생동·식물 I급 지정" },
+        { year: "1998", text: "멸종위기 야생동·식물 및 보호<br>야생동·식물 지정" }
+      ],
+      description: `
+        <p>몸길이는 약 152cm, 날개 편 길이는 약 2.4m, 체중은 수컷 약 6.3kg, 암컷 약 5.1kg으로 대형  조류이다. 몸은 전체적으로 암수 모두 흰색이다. 눈앞의 피부와 부리 기부, 윗부리 기부의 큰 혹, 아래 부리는 검은색을 띤다. 윗부리의 나머지 부분은 붉은색을 띤 황색이고 다리는 회색이다.</p>
+      `,
+      threats: `
+        <p>과거 많은 개체가 도래했던 동해안 석호의 경우, 개발로 인한 서식 환경 악화로 도래 개체수가  급격히 감소하였다. 현재 소수 개체가 도래하고 있는 국내 호수 및 습지에서의 개발로 인한 서식  환경 악화가 국내 월동 개체에 대한 주요 위협요인이다.</p>
+      `,
+      ecology: {
+        features: `
+          <p>수생식물이 잘 발달한 습지에서 수초, 흙을 이용하여 둥지를 만든다. 4~5월에 번식하며, 한 번에 2~5개의 알을 낳는다. 포란 기간은 약 40일이며, 부화한 새끼를 키우는 기간인 육추  기간은 120~150일이다. 알은 청록색을 띤 흰색이다.</p>
+          <p>부리에 달린 혹 때문에 혹고니라는 이름이 붙여졌다. 선명한 오렌지색의 부리, 검은색 혹에 의해 다른 고니들과 쉽게 구별된다</p>
+        `,
+        habitat: `
+          <p>하구, 저수지, 호수, 물이 천천히 흐르는 강 하류 등지에 서식한다.</p>
+        `,
+        food: `
+          <p>물속에 머리를 목까지 넣어 수생식물, 수서동물 등을 먹는다.</p>
+        `
+      },
+      distribution: {
+        domestic: `
+          <p>우리나라 전역의 하구 저수지, 강 등 겨울철에 도래한다. 화진포호, 경포호 등이 주요 도래지였으나 현재 관찰이 어렵다. 2010년부터 2023년까지는 시화호, 팔당호, 남한강, 천수만, 낙동강 하구, 경기도 연천군, 제주도 등에서 소수 개체가 도래하는 것이 관찰되고 있다.</p>
+        `,
+        overseas: `
+          <p>유럽 전역에 분포하며, 그 외 터키, 카자흐스탄 등의 중앙아시아와 러시아 중남부, 중국, 몽골, 일본, 인도 등지에 분포한다.</p>
+        `
+      }
+    };
+
+    // 15
+    birdData[15] = {
+      id: "15",
+      title: "황새",
+      scientificName: "Ciconia boyciana",
+      taxonomy: {
+        phylum: "척삭동물문",
+        class: "조강",
+        order: "황새목",
+        family: "황새과",
+        genus: "황새속"
+      },
+      history: [
+        { year: "2022", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2017", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2012", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2005", text: "멸종위기 야생동·식물 I급 지정" },
+        { year: "1998", text: "멸종위기 야생동·식물 및 보호<br>야생동·식물 지정" }
+      ],
+      description: `
+        <p>몸길이는 약 110cm, 날개 편 길이는 약 195cm, 체중은 4.4~5kg이다. 땅에 앉아 있을 때는 날개 뒤쪽과 꽁지가 검은색으로 보이지만 날개 끝만 검은색이며, 온몸은 흰색이다. 암수가 같은 색이라서 야외에서 구별하기는 어렵다. 부리는 검은색으로 크고 길며, 다리와 눈 주위는 붉은색이다. 날 때는 목을 쭉 뻗고 난다.</p>
+      `,
+      threats: `
+        <p>민가 주변에서 생활하기 때문에 사람에 대한 경계심이 적어 쉽게 남획되었으며, 개발에 따른 서식처 감소와 농약으로 인한 먹이자원 감소 등이 개체수 감소의 원인으로 지목된다. 국내 복원프로그램을 통해 재도입된 개체들의 경우, 전신주 및 전깃줄 충돌이 주요 위협요인으로 확인되었다.</p>
+      `,
+      ecology: {
+        features: `
+          <p>번식기에는 부리를 부딪쳐서 ‘가락, 가락, 가락’하는 소리를 낸다. 2015년부터 인공증식한 개체의 재도입이 시행되고 있으며, 2020년에 재도입된 개체 간의 첫 번식이 확인되었다. 또한, 2023년 재도입된 개체와 야생 황새 간의 자연번식이 처음으로 기록되었다.</p>
+        `,
+        habitat: `
+          <p>저수지, 하구, 초습지, 농경지 등 넓은 들판이나 습지대 물가에 주로 서식한다.</p>
+        `,
+        food: `
+          <p>어류, 양서류, 파충류, 곤충류 등을 잡아먹는다.</p>
+        `
+      },
+      distribution: {
+        domestic: `
+          <p>1950년까지 전국적으로 번식하는 텃새였으며, 일부 개체군은 북쪽에서 번식하고 겨울에 국내에서 월동하였다. 1971년 마지막 번식쌍이 사라진 후에 천수만, 해남, 제주도, 순천만, 낙동강 하구, 대구 낙동강, 우포늪, 울산광역시 태화강, 사천시, 주문진 등 겨울철에 소수가 도래한다.</p>
+        `,
+        overseas: `
+          <p>시베리아, 아무르강, 연해주 남부, 중국 동북부 지방에서 번식하고, 홍콩, 일본, 중국, 대만 등지에서 월동한다.</p>
+        `
+      }
+    };
+
+    // 16
+    birdData[16] = {
+      id: "16",
+      title: "흰꼬리수리",
+      scientificName: "Haliaeetus albicilla",
+      taxonomy: {
+        phylum: "척삭동물문",
+        class: "조강",
+        order: "매목",
+        family: "수리과",
+        genus: "흰꼬리수리속"
+      },
+      history: [
+        { year: "2022", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2017", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2012", text: "멸종위기 야생생물 I급 지정" },
+        { year: "2005", text: "멸종위기 야생동·식물 I급 지정" },
+        { year: "1998", text: "멸종위기 야생동·식물 및 보호<br>야생동·식물 지정" }
+      ],
+      description: `
+        <p>몸길이는 74~92cm, 체중은 수컷 3.1~5.4kg, 암컷 3.7~6.9kg, 날개 편 길이는 193~244cm의 대형  맹금류이다. 흰색의 꽁지와 노란색의 큰 부리가 특징적이며, 전체적으로 갈색을 띤다. 머리는 황갈색이고 몸의 다른 부위에 비해 색이 엷다. 꼬리는 짧고 둥근 마름모꼴이다. 날개 앞쪽과 날개  뒤쪽이 거의 평행선을 이루어 밑에서 보면 직사각형이다. 부리와 다리는 노란색이지만 어린 새는  흑갈색으로 차이가 있다. 어린 새의 경우, 부리는 검은색, 머리는 암갈색으로 가장 어둡고, 흰색  꽁지깃의 바깥이 흑갈색이다. 또한 등과 날개덮깃은 밝은 갈색에 가장자리가 흑갈색이다.</p>
+      `,
+      threats: `
+        <p>수역을 낀 개활지를 서식처로 선호하는 특성이 있어 하천, 해안, 호수, 간척지 및 하구 개발로 인한 서식처 감소가  주요 위협요인으로 추정된다. 또한 사냥, 낚시 등에 사용된 납을 섭취한 소형 동물이나 어류 등을 잡아먹고 중금속에 중독되는 경우도 발생하고 있다.</p>
+      `,
+      ecology: {
+        features: `
+          <p>번식기는 3월 중순~5월로, 한 번에 1~4개 정도의 알을 낳는다. 포란 기간은 약 38일이며, 부화한 새끼를 키우는 기간인 육추 기간은 70~90일이다. 둥지는 산림 내 교목의 가지 위에 나뭇가지를 올려 쌓아 만들거나 해안가 절벽 등지에 만든다. 번식기에는 동물의 깃털 등을 둥지에 깔기도 한다.</p>
+          <p>우리나라에서 관찰되는 흰꼬리수리는 주로 어린 개체가 많다. 대부분 부화 후 5년이  지나야 성숙이 이루어진다.</p>
+        `,
+        habitat: `
+          <p>해안, 소택지, 호수, 하구 등 넓은 수면을 낀 지역을 중심으로 주로 단독으로 생활한다.</p>
+        `,
+        food: `
+          <p>소형 포유류, 조류, 어류 등을 잡아먹는다.특히 연어와 송어를 가장 선호하는 것으로 알려져 있다.</p>
+        `
+      },
+      distribution: {
+        domestic: `
+          <p>겨울에 한강 하구, 임진강 하구, 시화호, 천수만, 낙동강 하구, 강릉 남대천 등 해안과 인접한 간척지 및 큰 하천 인근에서 주로 월동한다. 내륙지역에는 철원평야, 충주시, 아산시, 안동시 등지에서도 관찰된다. 전국적으로 관찰 되지만 개체수는 많지 않다. 매우 드물게 텃새로 서식하며, 시화호와 흑산도에서 번식기록이 있다.  흑산도는 현재까지 알려진 흰꼬리수리의 번식지 중 최남단에 위치한다.</p>
+        `,
+        overseas: `
+          <p>극동아시아부터 유럽까지 유라시아 대륙에 걸쳐 폭넓게 분포한다. 그린란드, 북유럽 및 동유럽, 러시아, 중국 동북부 등에서 번식하며, 중앙아시아, 지중해 지역, 동남아시아, 중국 남동부, 일본 등에서 월동한다.</p>
+        `
+      }
+    };
+
+
+    function loadDetail(i) {
+      // Re-select content because we wipe innerHTML in rightPane
+      const contentEl = document.getElementById("content");
+      if (!contentEl) return;
+
+      const data = birdData[i];
+      if (!data) return;
+
+      // Build history HTML
+      const historyHtml = data.history.map(h => `
+        <div class="info-row">
+          <div class="detail-subtitle">${h.year}</div>
+          <div class="detail-body">${h.text}</div>
+        </div>
+      `).join('');
+
+      contentEl.innerHTML = `
+          <div class="detail-wrap">
+            
+            <div class="sticky-header-wrapper">
+              <div class="detail-col">
+                <div class="header-number">${data.id}</div>
+              </div>
+              <div class="detail-col" style="display:flex; flex-direction:column; justify-content:flex-end;">
+                <div class="header-title">${data.title}</div>
+                <div class="header-scientific-name">${data.scientificName}</div>
+              </div>
+
+              <div class="header-divider"></div>
+            </div>
+
+            <div class="detail-col">
+              <div class="detail-title">분류학적 위치</div>
+              <div class="info-row">
+                <div class="detail-subtitle">문</div>
+                <div class="detail-body">${data.taxonomy.phylum}</div>
+              </div>
+              <div class="info-row">
+                <div class="detail-subtitle">강</div>
+                <div class="detail-body">${data.taxonomy.class}</div>
+              </div>
+              <div class="info-row">
+                <div class="detail-subtitle">목</div>
+                <div class="detail-body">${data.taxonomy.order}</div>
+              </div>
+              <div class="info-row">
+                <div class="detail-subtitle">과</div>
+                <div class="detail-body">${data.taxonomy.family}</div>
+              </div>
+              <div class="info-row">
+                <div class="detail-subtitle">속</div>
+                <div class="detail-body">${data.taxonomy.genus}</div>
+              </div>
+            </div>
+
+            <div class="detail-col">
+              <div class="detail-title">지정이력</div>
+              ${historyHtml}
+            </div>
+            
+            <div class="detail-col box270">
+              <div class="detail-title">형태</div>
+              <div class="detail-body">
+                ${data.description}
+              </div>
+            </div>
+
+            <div class="detail-col box270">
+              <div class="detail-title">위협요인</div>
+              <div class="detail-body">
+                ${data.threats}
+              </div>
+            </div>
+
+            <div class="detail-col">
+              <div class="detail-title">생태</div>
+
+              <div class="detail-subtitle">특징</div>
+              <div class="detail-body2">
+                ${data.ecology.features}
+              </div>
+
+              <div class="detail-subtitle">서식처</div>
+              <div class="detail-body2">
+                ${data.ecology.habitat}
+              </div>
+
+              <div class="detail-subtitle">먹이</div>
+              <div class="detail-body2">
+                ${data.ecology.food}
+              </div>
+            </div>
+
+            <div class="detail-col box240">
+              <div class="detail-title">분포</div>
+
+              <div class="detail-subtitle">국내</div>
+              <div class="detail-body2">
+                ${data.distribution.domestic}
+              </div>
+
+              <div class="detail-subtitle">국외</div>
+              <div class="detail-body2">
+                ${data.distribution.overseas}
+              </div>
+            </div>
+          </div>
+      `;
+    }
+
+    function setupHomeHeroScroll() {
+      // 더 이상 스크롤 연동 로직 없음 (CSS sticky로 처리)
+      return null;
+    }
+
+    function resetRightToHome() {
+      rightPane.innerHTML = `
+    <div class="home-bg-fixed">
+      <img src="images/home.png" alt="Nest Background" />
+    </div>
+    <div class="right-scroll-container">
+      <div class="home-content-wrapper">
+        <div class="home-header-rail">
+          <div class="home-header-grid">
+            <div class="home-title-block">
+              <h1 class="home-title">멸종위기 1급<br>조류 아카이빙</h1>
+            </div>
+            <div class="home-subtitle-block">
+              <div class="home-subtitle">
+                서울과학기술대학교<br>편집디자인<br>기말 프로젝트<br>2025.11.05.-2025.12.00.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 👇 여기 home-text-grid 래퍼를 다시 살려준 부분 -->
+        <div class="home-text-grid">
+          <div>
+            <div class="detail-title">현황</div>
+            <div class="detail-body" style="height:auto;">
+              <p>우리나라에는 현재 '야생생물 보호 및 관리에 관한 법률'에 따라 총 282종의 멸종위기 야생생물이 지정되어 있으며, 이 중 약 70종이 조류에 해당한다.</p>
+              <p>그러나 이와 같은 위기 상황이 충분히 인식되어 있다고 말하기는 어렵다. 대다수의 사람들은 "멸종위기 동물" 하면 호랑이나 곰 같은 상징적인 동물만을 떠올릴 뿐, 실제로 우리 주변 하늘을 날던 새들이 사라지고 있다는 사실에는 무관심하다. 조류는 일상 속에서 가장 자주 접할 수 있는 동물이지만, 그 존재의 가치는 쉽게 잊히고 있다.</p>
+            </div>
+          </div>
+
+          <div>
+            <div class="detail-title">파장</div>
+            <div class="detail-body" style="height:auto;">
+              <p>조류의 멸종은 생태계의 균형을 근본적으로 흔든다. 새들은 곤충 개체 수를 조절하고, 식물의 씨앗을 퍼뜨리며, 생태계 내 먹이사슬의 중요한 고리 역할을 한다. 한 종의 조류가 사라지면 그 종에 의존하던 곤충, 식물, 포식자들이 연쇄적으로 영향을 받게 된다.</p>
+              <p>또한 조류가 서식하는 갯벌과 습지는 수질 정화와 탄소 저장, 홍수 완화 기능을 하는 핵심 생태계이다. 새가 사라지면 이 서식지의 회복력도 약화되고, 결국 인간에게 직접적인 환경적 피해가 돌아오게 된다.</p>
+            </div>
+          </div>
+
+          <div>
+            <div class="detail-title">원인</div>
+            <div class="detail-body" style="height:auto;">
+              <p>조류의 멸종을 막기 위한 방법은 이미 잘 알려져 있다. 서식지 보전, 갯벌 매립 제한, 농약 사용 감축, 인공 둥지 설치, 시민 모니터링 등 다양한 보전 전략이 존재한다. 문제는 '방법의 부재'가 아니라 '실행의 부재'다.</p>
+              <p>서식지 보전은 개발 이익과 충돌하는 경우가 많고, 환경영향평가는 형식적으로 이루어지는 사례가 여전히 존재한다. 또한 지역사회는 '멸종위기종 보호'보다는 '경제적 효율성'을 우선시하는 경향이 강하다. 조류 보전 활동에 대한 시민의 관심과 참여도 또한 높지 않다.</p>
+              <p>결국, 보전의 기술은 충분하지만, 보전의 문화는 부족한 사회가 오늘날 우리가 마주한 현실이다. 그 결과 제도적 보호종 지정은 늘어나고 있지만, 실제 개체 수 회복은 좀처럼 이루어지지 않고 있다.</p>
+            </div>
+          </div>
+
+          <div>
+            <div class="detail-title">의의</div>
+            <div class="detail-body" style="height:auto;">
+              <p>이러한 상황에서 '멸종위기 1급 조류 아카이빙 프로젝트'는 단순한 생태 데이터 기록이 아니라, 사라져 가는 존재들의 흔적을 기억하고 전하는 행위로서 사회적 의미를 가진다.</p>
+              <p>아카이빙은 과거의 기억을 저장하는 동시에, 현재의 무관심을 비추는 거울이 된다. 이 프로젝트는 데이터를 넘어 감정적 공감을 불러일으키며, 사람들이 "이 새가 사라졌다"가 아니라 "이 새가 우리와 함께 살았다"는 인식을 회복하도록 돕는다.</p>
+              <p>이는 곧 자연과 인간의 관계를 회복하는 문화적 시도이자, 인식 → 공감 → 행동으로 이어지는 생태적 감수성의 사다리 중 '공감'의 단계를 채워주는 일이다.</p>
+              <p>멸종위기 조류의 아카이빙은 그들의 죽음을 애도하는 동시에, 다시는 같은 죽음을 반복하지 않기 위한 기억의 장치가 될 수 있다.</p>
+              <p>이 프로젝트는 그 자체로 '보전의 출발점'이며, 잊힘을 막는 가장 인간적인 방식의 보호 활동이다.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-footer">
+          Copyright ⓒ 2025 JaeHyun Jeong. All rights reserved.
+        </div>
+      </div>
+    </div>
+  `;
+      homeScrollCleanup = setupHomeHeroScroll(rightPane);
+    }
+    (function init() {
+      // Create custom cursor element
+      const cursor = document.createElement("div");
+      cursor.className = "custom-cursor";
+      document.body.appendChild(cursor);
+
+      document.addEventListener("mousemove", (e) => {
+        cursor.style.left = `${e.clientX}px`;
+        cursor.style.top = `${e.clientY}px`;
+      });
+
+      for (let i = 1; i <= TILE_COUNT; i++) grid.appendChild(makeTile(i));
+    })();
+
+    homeScrollCleanup = setupHomeHeroScroll(document);
+  </script>
+</body>
+
+</html>
